@@ -32,10 +32,11 @@ public final class CacheFeedLoader {
     }
     
     private func cache(_ items: [FeedItem], with completion: @escaping (SaveResult) -> Void) {
-        store.insert(items: items, timestamp: currentDate()) { [weak self] error in
+        store.insert(items: items.toLocal(), timestamp: currentDate()) { [weak self] error in
             guard self != nil else { return }
             completion(error)
         }
     }
 }
+
 
