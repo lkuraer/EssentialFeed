@@ -9,7 +9,7 @@ import Foundation
 import XCTest
 import EssentialFeed
 
-class LocalFeedLoader {
+class CacheFeedLoader {
     var store: FeedStore
     var currentDate: () -> Date
     
@@ -19,12 +19,21 @@ class LocalFeedLoader {
     }
     
     func save(_ items: [FeedItem], completion: @escaping (Error?) -> Void) {
-        self.store.deleteCache { [unowned self] error in
-            if error == nil {
-                self.store.insert(items: items, timestamp: self.currentDate(), completion: completion)
+        self.store.deleteCache { [weak self] error in
+            guard let self = self else { return }
+            
+            if let deletionError = error {
+                completion(deletionError)
             } else {
-                completion(error)
+                self.cache(items, with: completion)
             }
+        }
+    }
+    
+    private func cache(_ items: [FeedItem], with completion: @escaping (Error?) -> Void) {
+        store.insert(items: items, timestamp: currentDate()) { [weak self] error in
+            guard self != nil else { return }
+            completion(error)
         }
     }
 }
@@ -98,7 +107,7 @@ class CacheFeedUseCaseTests: XCTestCase {
         }
     }
     
-    func test_save_InsertionSuccessfull() {
+    func test_save_insertionSuccessfull() {
         let (store, sut) = makeSUT()
         
         expect(sut, toCompleteWith: nil) {
@@ -106,8 +115,35 @@ class CacheFeedUseCaseTests: XCTestCase {
             store.completeInsertionSuccessfully()
         }
     }
+    
+    func test_save_abortDeletionAfterDeallocation() {
+        let store = FeedStoreSpy()
+        var sut: CacheFeedLoader? = CacheFeedLoader(store: store, currentDate: Date.init)
+        
+        var receivedResults = [Error?]()
+        sut?.save([uniqueItem()]) { receivedResults.append($0) }
+        
+        sut = nil
+        store.completeDeletion(with: anyNSError())
+        
+        XCTAssertTrue(receivedResults.isEmpty)
+    }
+    
+    func test_save_abortSavingAfterDeallocation() {
+        let store = FeedStoreSpy()
+        var sut: CacheFeedLoader? = CacheFeedLoader(store: store, currentDate: Date.init)
+        
+        var receivedResults = [Error?]()
+        sut?.save([uniqueItem()]) { receivedResults.append($0) }
+        
+        store.completeDeletionOnSuccess()
+        sut = nil
+        store.completeInsertion(with: anyNSError())
+        
+        XCTAssertTrue(receivedResults.isEmpty)
+    }
 
-    private func expect(_ sut: LocalFeedLoader, toCompleteWith expectedError: NSError?, when action: () -> Void, file: StaticString = #filePath, line: UInt = #line) {
+    private func expect(_ sut: CacheFeedLoader, toCompleteWith expectedError: NSError?, when action: () -> Void, file: StaticString = #filePath, line: UInt = #line) {
         
         let items = [uniqueItem(), uniqueItem()]
         
@@ -124,9 +160,9 @@ class CacheFeedUseCaseTests: XCTestCase {
         XCTAssertEqual(receivedError as? NSError, expectedError)
     }
 
-    private func makeSUT(currentDate: @escaping () -> Date = Date.init, file: StaticString = #file, line: UInt = #line) -> (store: FeedStoreSpy, sut: LocalFeedLoader) {
+    private func makeSUT(currentDate: @escaping () -> Date = Date.init, file: StaticString = #file, line: UInt = #line) -> (store: FeedStoreSpy, sut: CacheFeedLoader) {
         let store = FeedStoreSpy()
-        let sut = LocalFeedLoader(store: store, currentDate: currentDate)
+        let sut = CacheFeedLoader(store: store, currentDate: currentDate)
         
         trackForMemoryLeaks(store, file: file, line: line)
         trackForMemoryLeaks(sut, file: file, line: line)
