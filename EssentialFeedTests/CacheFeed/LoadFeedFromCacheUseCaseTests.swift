@@ -35,7 +35,7 @@ class LoadFeedFromCacheUseCaseTests: XCTestCase {
             switch result {
             case .failure(let error):
                 receivedError = error
-            case .success(_):
+            default:
                 XCTFail("Failed to pass test, completion returns result success: \(result)")
             }
             exp.fulfill()
@@ -48,6 +48,28 @@ class LoadFeedFromCacheUseCaseTests: XCTestCase {
         XCTAssertEqual(expectedError, receivedError as? NSError)
     }
 
+    func test_load_requestCacheCompletesWithEmptyArray() {
+        let (store, sut) = makeSUT()
+        
+        let exp = expectation(description: "Wait for result")
+    
+        var receivedImages: [FeedImage]?
+        sut.load { result in
+            switch result {
+            case .success(let images):
+                receivedImages = images
+            default:
+                XCTFail("Failed to pass test, completion returns result failure: \(result)")
+            }
+            exp.fulfill()
+        }
+        
+        store.completesWithEmptyArray()
+        
+        wait(for: [exp], timeout: 1.0)
+        
+        XCTAssertEqual(receivedImages, [])
+    }
 
     // Helpers
     private func makeSUT(currentDate: @escaping () -> Date = Date.init, file: StaticString = #file, line: UInt = #line) -> (store: FeedStoreSpy, sut: CacheFeedLoader) {
