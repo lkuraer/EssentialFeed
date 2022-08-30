@@ -19,6 +19,11 @@ public final class CacheFeedLoader {
         self.currentDate = currentDate
     }
     
+    
+    public func load() {
+        store.retreive()
+    }
+
     public func save(_ items: [FeedImage], completion: @escaping (SaveResult) -> Void) {
         self.store.deleteCache { [weak self] error in
             guard let self = self else { return }

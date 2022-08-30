@@ -147,41 +147,4 @@ class CacheFeedUseCaseTests: XCTestCase {
         return NSError(domain: "any error", code: 0)
     }
     
-    private class FeedStoreSpy: FeedStore {
-        var deletionCompletions = [DeletionCompletion]()
-        var insertionCompletions = [InsertionCompletion]()
-        
-        var receivedMessages = [ReceivedMessage]()
-        
-        enum ReceivedMessage: Equatable {
-            case deleteCacheFeed
-            case insert([LocalFeedImage], Date)
-        }
-        
-        func deleteCache(completion: @escaping DeletionCompletion) {
-            deletionCompletions.append(completion)
-            receivedMessages.append(.deleteCacheFeed)
-        }
-        
-        func completeDeletion(with error: Error, at index: Int = 0) {
-            deletionCompletions[index](error)
-        }
-        
-        func completeDeletionOnSuccess(at index: Int = 0) {
-            deletionCompletions[index](nil)
-        }
-        
-        func insert(items: [LocalFeedImage], timestamp: Date, completion: @escaping InsertionCompletion) {
-            insertionCompletions.append(completion)
-            receivedMessages.append(.insert(items, timestamp))
-        }
-        
-        func completeInsertion(with error: Error, at index: Int = 0) {
-            insertionCompletions[index](error)
-        }
-
-        func completeInsertionSuccessfully(at index: Int = 0) {
-            insertionCompletions[index](nil)
-        }
-    }
 }
