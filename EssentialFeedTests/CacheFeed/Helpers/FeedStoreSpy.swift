@@ -54,11 +54,15 @@ class FeedStoreSpy: FeedStore {
     }
     
     func completeRetreival(with error: Error, at index: Int = 0) {
-        retreivalCompletions[index](error)
+        retreivalCompletions[index](.failure(error: error))
     }
     
     func completesWithEmptyArray(at index: Int = 0) {
-        retreivalCompletions[index](nil)
+        retreivalCompletions[index](.empty)
+    }
+
+    func completeRetreival(with feed: [LocalFeedImage], timestamp: Date, at index: Int = 0) {
+        retreivalCompletions[index](.found(feed: feed, timestamp: timestamp))
     }
 
 }

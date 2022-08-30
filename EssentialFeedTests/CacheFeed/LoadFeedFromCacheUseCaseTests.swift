@@ -28,47 +28,70 @@ class LoadFeedFromCacheUseCaseTests: XCTestCase {
         let (store, sut) = makeSUT()
         let expectedError: NSError = anyNSError()
         
-        let exp = expectation(description: "Wait for error response")
-    
-        var receivedError: Error?
-        sut.load { result in
-            switch result {
-            case .failure(let error):
-                receivedError = error
-            default:
-                XCTFail("Failed to pass test, completion returns result success: \(result)")
-            }
-            exp.fulfill()
+        expect(sut, toCompleteWith: .failure(expectedError)) {
+            store.completeRetreival(with: expectedError)
         }
-        
-        store.completeRetreival(with: expectedError)
-        
-        wait(for: [exp], timeout: 1.0)
-        
-        XCTAssertEqual(expectedError, receivedError as? NSError)
     }
 
     func test_load_requestCacheCompletesWithEmptyArray() {
         let (store, sut) = makeSUT()
         
+        expect(sut, toCompleteWith: .success([])) {
+            store.completesWithEmptyArray()
+        }
+    }
+    
+    func test_load_requestCacheCompletesWhenDateIsValid() {
+        let feed = uniqueItems()
+        let fixedCurrentDate = Date()
+        let lessThanSevenDays = fixedCurrentDate.adding(days: -7).adding(seconds: 1)
+        let (store, sut) = makeSUT(currentDate: { fixedCurrentDate })
+        
+        expect(sut, toCompleteWith: .success(feed.models)) {
+            store.completeRetreival(with: feed.locals, timestamp: lessThanSevenDays)
+        }
+    }
+    
+    func test_load_requestCacheCompletesEmptyArrayWhenDateIsNotValid() {
+        let feed = uniqueItems()
+        let fixedCurrentDate = Date()
+        let lessThanSevenDays = fixedCurrentDate.adding(days: -7)
+        let (store, sut) = makeSUT(currentDate: { fixedCurrentDate })
+        
+        expect(sut, toCompleteWith: .success([])) {
+            store.completeRetreival(with: feed.locals, timestamp: lessThanSevenDays)
+        }
+    }
+    
+    func test_load_requestCacheCompletesEmptyArrayWhenDateIsMoreThanSevenDays() {
+        let feed = uniqueItems()
+        let fixedCurrentDate = Date()
+        let moreThanSevenDays = fixedCurrentDate.adding(days: -7).adding(days: -1)
+        let (store, sut) = makeSUT(currentDate: { fixedCurrentDate })
+        
+        expect(sut, toCompleteWith: .success([])) {
+            store.completeRetreival(with: feed.locals, timestamp: moreThanSevenDays)
+        }
+    }
+    
+    private func expect(_ sut: CacheFeedLoader, toCompleteWith expectedResult: CacheFeedLoader.LoadResult, when action: () -> Void, file: StaticString = #filePath, line: UInt = #line) {
+        
         let exp = expectation(description: "Wait for result")
     
-        var receivedImages: [FeedImage]?
-        sut.load { result in
-            switch result {
-            case .success(let images):
-                receivedImages = images
+        sut.load { receivedResult in
+            switch (receivedResult, expectedResult) {
+            case let (.success(receivedImages), .success(expectedImages)):
+                XCTAssertEqual(receivedImages, expectedImages, file: file, line: line)
+            case let (.failure(receivedError as NSError), .failure(expectedError as NSError)):
+                XCTAssertEqual(receivedError, expectedError, file: file, line: line)
             default:
-                XCTFail("Failed to pass test, completion returns result failure: \(result)")
+                XCTFail("Expected result \(expectedResult), got received result instead \(receivedResult)")
             }
             exp.fulfill()
         }
-        
-        store.completesWithEmptyArray()
-        
+        action()
+
         wait(for: [exp], timeout: 1.0)
-        
-        XCTAssertEqual(receivedImages, [])
     }
 
     // Helpers
@@ -85,5 +108,26 @@ class LoadFeedFromCacheUseCaseTests: XCTestCase {
     private func anyNSError() -> NSError {
         return NSError(domain: "any error", code: 0)
     }
+    
+    private func uniqueItem() -> FeedImage {
+        return FeedImage(id: UUID(), description: nil, location: nil, imageURL: URL(string: "https://any-url.com")!)
+    }
+    
+    private func uniqueItems() -> (models: [FeedImage], locals: [LocalFeedImage]) {
+        let items = [uniqueItem(), uniqueItem()]
+        let localItems = items.map { LocalFeedImage(id: $0.id, description: $0.description, location: $0.location, imageURL: $0.imageURL) }
+        return (items, localItems)
+    }
 
+
+}
+
+private extension Date {
+    func adding(days: Int) -> Date {
+        return Calendar(identifier: .gregorian).date(byAdding: .day, value: days, to: self)!
+    }
+    
+    func adding(seconds: TimeInterval) -> Date {
+        self + seconds
+    }
 }
