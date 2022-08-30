@@ -9,8 +9,10 @@ import Foundation
 import EssentialFeed
 
 class FeedStoreSpy: FeedStore {
+    
     var deletionCompletions = [DeletionCompletion]()
     var insertionCompletions = [InsertionCompletion]()
+    var retreivalCompletions = [RetreivalCompletion]()
     
     var receivedMessages = [ReceivedMessage]()
     
@@ -46,7 +48,13 @@ class FeedStoreSpy: FeedStore {
         insertionCompletions[index](nil)
     }
     
-    func retreive() {
+    func retreive(completion: @escaping RetreivalCompletion) {
+        retreivalCompletions.append(completion)
         receivedMessages.append(.retreive)
     }
+    
+    func completeRetreival(with error: Error, at index: Int = 0) {
+        retreivalCompletions[index](error)
+    }
+
 }

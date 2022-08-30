@@ -19,9 +19,8 @@ public final class CacheFeedLoader {
         self.currentDate = currentDate
     }
     
-    
-    public func load() {
-        store.retreive()
+    public func load(completion: @escaping (Error?) -> Void) {
+        store.retreive(completion: completion)
     }
 
     public func save(_ items: [FeedImage], completion: @escaping (SaveResult) -> Void) {
