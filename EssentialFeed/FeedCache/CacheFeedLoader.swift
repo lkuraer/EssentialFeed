@@ -13,14 +13,19 @@ public final class CacheFeedLoader {
     var currentDate: () -> Date
     
     public typealias SaveResult = Error?
+    public typealias LoadResult = LoadFeedResult
     
     public init(store: FeedStore, currentDate: @escaping () -> Date) {
         self.store = store
         self.currentDate = currentDate
     }
     
-    public func load(completion: @escaping (Error?) -> Void) {
-        store.retreive(completion: completion)
+    public func load(completion: @escaping (LoadResult) -> Void) {
+        store.retreive { error in
+            if let error = error {
+                completion(.failure(error))
+            }
+        }
     }
 
     public func save(_ items: [FeedImage], completion: @escaping (SaveResult) -> Void) {
