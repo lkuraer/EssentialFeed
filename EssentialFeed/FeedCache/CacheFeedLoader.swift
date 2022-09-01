@@ -25,14 +25,18 @@ public final class CacheFeedLoader {
     }
     
     public func load(completion: @escaping (LoadResult) -> Void) {
-        store.retreive { [unowned self] result in
+        store.retreive { [weak self] result in
+            guard let self = self else { return }
             switch result {
             case let .failure(error):
-                store.deleteCache(completion: { _ in })
+                self.store.deleteCache(completion: { _ in })
                 completion(.failure(error))
             case let .found(feed, timestamp) where self.validate(timestamp):
                 completion(.success(feed.toModels()))
-            case .found, .empty:
+            case .found:
+                self.store.deleteCache(completion: { _ in })
+                fallthrough
+            case .empty:
                 completion(.success([]))
             }
         }

@@ -74,7 +74,7 @@ class LoadFeedFromCacheUseCaseTests: XCTestCase {
         }
     }
     
-    func test_load_deletesCacheOnRetreivalError() {
+    func test_load_deleteCacheOnRetreivalError() {
         let (store, sut) = makeSUT()
         
         sut.load { _ in }
@@ -83,6 +83,65 @@ class LoadFeedFromCacheUseCaseTests: XCTestCase {
         XCTAssertEqual(store.receivedMessages, [.retreive, .deleteCacheFeed])
     }
 
+    func test_load_doesNotdeleteCacheOnRetreivalError() {
+        let (store, sut) = makeSUT()
+        
+        sut.load { _ in }
+        store.completesWithEmptyArray()
+        
+        XCTAssertEqual(store.receivedMessages, [.retreive])
+    }
+
+    func test_load_doesNotdeleteCacheOnLessThanSevenDaysOldCache() {
+        let feed = uniqueItems()
+        let fixedCurrentDate = Date()
+        let lessThanSevenDays = fixedCurrentDate.adding(days: -7).adding(seconds: 1)
+        let (store, sut) = makeSUT(currentDate: { fixedCurrentDate })
+
+        sut.load { _ in }
+        store.completeRetreival(with: feed.locals, timestamp: lessThanSevenDays)
+
+        XCTAssertEqual(store.receivedMessages, [.retreive])
+    }
+
+    func test_load_deleteCacheOnSevenDaysOldCache() {
+        let feed = uniqueItems()
+        let fixedCurrentDate = Date()
+        let sevenDays = fixedCurrentDate.adding(days: -7)
+        let (store, sut) = makeSUT(currentDate: { fixedCurrentDate })
+
+        sut.load { _ in }
+        store.completeRetreival(with: feed.locals, timestamp: sevenDays)
+
+        XCTAssertEqual(store.receivedMessages, [.retreive, .deleteCacheFeed])
+    }
+
+    func test_load_deleteCacheOnMoreThanSevenDaysOldCache() {
+        let feed = uniqueItems()
+        let fixedCurrentDate = Date()
+        let moreThanSevenDays = fixedCurrentDate.adding(days: -7).adding(days: -1)
+        let (store, sut) = makeSUT(currentDate: { fixedCurrentDate })
+
+        sut.load { _ in }
+        store.completeRetreival(with: feed.locals, timestamp: moreThanSevenDays)
+
+        XCTAssertEqual(store.receivedMessages, [.retreive, .deleteCacheFeed])
+    }
+
+    func test_load_doesNotReceiveResultsWhenSUTWasDeallocated() {
+        let store = FeedStoreSpy()
+        var sut: CacheFeedLoader? = CacheFeedLoader(store: store, currentDate: Date.init)
+        
+        var receivedResults = [CacheFeedLoader.LoadResult]()
+        
+        sut?.load { receivedResults.append($0) }
+        
+        sut = nil
+        
+        store.completesWithEmptyArray()
+
+        XCTAssertTrue(receivedResults.isEmpty)
+    }
     
     private func expect(_ sut: CacheFeedLoader, toCompleteWith expectedResult: CacheFeedLoader.LoadResult, when action: () -> Void, file: StaticString = #filePath, line: UInt = #line) {
         
