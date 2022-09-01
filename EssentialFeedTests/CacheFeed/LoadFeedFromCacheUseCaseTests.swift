@@ -74,6 +74,16 @@ class LoadFeedFromCacheUseCaseTests: XCTestCase {
         }
     }
     
+    func test_load_deletesCacheOnRetreivalError() {
+        let (store, sut) = makeSUT()
+        
+        sut.load { _ in }
+        store.completeRetreival(with: anyNSError())
+        
+        XCTAssertEqual(store.receivedMessages, [.retreive, .deleteCacheFeed])
+    }
+
+    
     private func expect(_ sut: CacheFeedLoader, toCompleteWith expectedResult: CacheFeedLoader.LoadResult, when action: () -> Void, file: StaticString = #filePath, line: UInt = #line) {
         
         let exp = expectation(description: "Wait for result")
