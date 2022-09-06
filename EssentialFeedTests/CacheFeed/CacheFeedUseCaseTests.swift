@@ -132,19 +132,5 @@ class CacheFeedUseCaseTests: XCTestCase {
 
         return (store, sut)
     }
-    
-    private func uniqueItem() -> FeedImage {
-        return FeedImage(id: UUID(), description: nil, location: nil, imageURL: URL(string: "https://any-url.com")!)
-    }
-    
-    private func uniqueItems() -> (models: [FeedImage], locals: [LocalFeedImage]) {
-        let items = [uniqueItem(), uniqueItem()]
-        let localItems = items.map { LocalFeedImage(id: $0.id, description: $0.description, location: $0.location, imageURL: $0.imageURL) }
-        return (items, localItems)
-    }
-    
-    private func anyNSError() -> NSError {
-        return NSError(domain: "any error", code: 0)
-    }
-    
+        
 }

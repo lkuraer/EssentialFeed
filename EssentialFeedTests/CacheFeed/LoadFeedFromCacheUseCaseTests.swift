@@ -74,16 +74,16 @@ class LoadFeedFromCacheUseCaseTests: XCTestCase {
         }
     }
     
-    func test_load_deleteCacheOnRetreivalError() {
+    func test_load_hasNoSideEffectsOnRetreivalError() {
         let (store, sut) = makeSUT()
         
         sut.load { _ in }
         store.completeRetreival(with: anyNSError())
         
-        XCTAssertEqual(store.receivedMessages, [.retreive, .deleteCacheFeed])
+        XCTAssertEqual(store.receivedMessages, [.retreive])
     }
 
-    func test_load_doesNotdeleteCacheOnRetreivalError() {
+    func test_load_hasNoSideEffectsWhenCacheIsEmpty() {
         let (store, sut) = makeSUT()
         
         sut.load { _ in }
@@ -104,7 +104,7 @@ class LoadFeedFromCacheUseCaseTests: XCTestCase {
         XCTAssertEqual(store.receivedMessages, [.retreive])
     }
 
-    func test_load_deleteCacheOnSevenDaysOldCache() {
+    func test_load_doesNotHaveSideEffectsWhenDeleteOldCache() {
         let feed = uniqueItems()
         let fixedCurrentDate = Date()
         let sevenDays = fixedCurrentDate.adding(days: -7)
@@ -113,7 +113,7 @@ class LoadFeedFromCacheUseCaseTests: XCTestCase {
         sut.load { _ in }
         store.completeRetreival(with: feed.locals, timestamp: sevenDays)
 
-        XCTAssertEqual(store.receivedMessages, [.retreive, .deleteCacheFeed])
+        XCTAssertEqual(store.receivedMessages, [.retreive])
     }
 
     func test_load_deleteCacheOnMoreThanSevenDaysOldCache() {
@@ -125,7 +125,7 @@ class LoadFeedFromCacheUseCaseTests: XCTestCase {
         sut.load { _ in }
         store.completeRetreival(with: feed.locals, timestamp: moreThanSevenDays)
 
-        XCTAssertEqual(store.receivedMessages, [.retreive, .deleteCacheFeed])
+        XCTAssertEqual(store.receivedMessages, [.retreive])
     }
 
     func test_load_doesNotReceiveResultsWhenSUTWasDeallocated() {
@@ -164,7 +164,7 @@ class LoadFeedFromCacheUseCaseTests: XCTestCase {
     }
 
     // Helpers
-    private func makeSUT(currentDate: @escaping () -> Date = Date.init, file: StaticString = #file, line: UInt = #line) -> (store: FeedStoreSpy, sut: CacheFeedLoader) {
+    func makeSUT(currentDate: @escaping () -> Date = Date.init, file: StaticString = #file, line: UInt = #line) -> (store: FeedStoreSpy, sut: CacheFeedLoader) {
         let store = FeedStoreSpy()
         let sut = CacheFeedLoader(store: store, currentDate: currentDate)
         
@@ -174,29 +174,5 @@ class LoadFeedFromCacheUseCaseTests: XCTestCase {
         return (store, sut)
     }
 
-    private func anyNSError() -> NSError {
-        return NSError(domain: "any error", code: 0)
-    }
-    
-    private func uniqueItem() -> FeedImage {
-        return FeedImage(id: UUID(), description: nil, location: nil, imageURL: URL(string: "https://any-url.com")!)
-    }
-    
-    private func uniqueItems() -> (models: [FeedImage], locals: [LocalFeedImage]) {
-        let items = [uniqueItem(), uniqueItem()]
-        let localItems = items.map { LocalFeedImage(id: $0.id, description: $0.description, location: $0.location, imageURL: $0.imageURL) }
-        return (items, localItems)
-    }
-
-
 }
 
-private extension Date {
-    func adding(days: Int) -> Date {
-        return Calendar(identifier: .gregorian).date(byAdding: .day, value: days, to: self)!
-    }
-    
-    func adding(seconds: TimeInterval) -> Date {
-        self + seconds
-    }
-}
