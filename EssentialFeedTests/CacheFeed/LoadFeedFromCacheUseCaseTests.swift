@@ -92,7 +92,7 @@ class LoadFeedFromCacheUseCaseTests: XCTestCase {
         XCTAssertEqual(store.receivedMessages, [.retreive])
     }
 
-    func test_load_doesNotdeleteCacheOnLessThanSevenDaysOldCache() {
+    func test_load_hasNoSideEffectsOnLessThanSevenDaysOldCache() {
         let feed = uniqueItems()
         let fixedCurrentDate = Date()
         let lessThanSevenDays = fixedCurrentDate.adding(days: -7).adding(seconds: 1)
@@ -104,7 +104,7 @@ class LoadFeedFromCacheUseCaseTests: XCTestCase {
         XCTAssertEqual(store.receivedMessages, [.retreive])
     }
 
-    func test_load_doesNotHaveSideEffectsWhenDeleteOldCache() {
+    func test_load_hasNoSideEffectsWhenDeleteOldCache() {
         let feed = uniqueItems()
         let fixedCurrentDate = Date()
         let sevenDays = fixedCurrentDate.adding(days: -7)
@@ -116,7 +116,7 @@ class LoadFeedFromCacheUseCaseTests: XCTestCase {
         XCTAssertEqual(store.receivedMessages, [.retreive])
     }
 
-    func test_load_deleteCacheOnMoreThanSevenDaysOldCache() {
+    func test_load_hasNoSideEffectsOnMoreThanSevenDaysOldCache() {
         let feed = uniqueItems()
         let fixedCurrentDate = Date()
         let moreThanSevenDays = fixedCurrentDate.adding(days: -7).adding(days: -1)
