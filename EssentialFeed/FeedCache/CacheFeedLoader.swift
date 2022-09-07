@@ -8,35 +8,30 @@
 import Foundation
 
 private final class CachePolicy {
-    var currentDate: () -> Date
-    private let calendar = Calendar(identifier: .gregorian)
+    init() {}
     
-    public init(currentDate: @escaping () -> Date) {
-        self.currentDate = currentDate
-    }
-
-    private var maxDays: Int {
+    private static let calendar = Calendar(identifier: .gregorian)
+    
+    private static var maxDays: Int {
         return 7
     }
     
-    func validate(_ timestamp: Date) -> Bool {
+    static func validate(_ timestamp: Date, against date: Date) -> Bool {
         guard let maxAge = calendar.date(byAdding: .day, value: maxDays, to: timestamp) else {
             return false
         }
         
-        return currentDate() < maxAge
+        return date < maxAge
     }
 }
 
 public final class CacheFeedLoader {
     private let store: FeedStore
     private let currentDate: () -> Date
-    private let cachePolicy: CachePolicy
 
     public init(store: FeedStore, currentDate: @escaping () -> Date) {
         self.store = store
         self.currentDate = currentDate
-        self.cachePolicy = CachePolicy(currentDate: currentDate)
     }
     
 }
@@ -73,7 +68,7 @@ extension CacheFeedLoader: FeedLoader {
             switch result {
             case let .failure(error):
                 completion(.failure(error))
-            case let .found(feed, timestamp) where self.cachePolicy.validate(timestamp):
+            case let .found(feed, timestamp) where CachePolicy.validate(timestamp, against: self.currentDate()):
                 completion(.success(feed.toModels()))
             case .found, .empty:
                 completion(.success([]))
@@ -90,7 +85,7 @@ extension CacheFeedLoader {
             switch result {
             case .failure:
                 self.store.deleteCache(completion: { _ in })
-            case let .found(_, timestamp) where !self.cachePolicy.validate(timestamp):
+            case let .found(_, timestamp) where !CachePolicy.validate(timestamp, against: self.currentDate()):
                 self.store.deleteCache(completion: { _ in })
             case .empty, .found:
                 break
