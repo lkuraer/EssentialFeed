@@ -62,7 +62,7 @@ class ValidateCacheBeforeRetreivalTestCase: XCTestCase {
     func test_validate_deletesOverExpiredCache() {
         let feed = uniqueItems()
         let fixedCurrentDate = Date()
-        let expiredTimestamp = fixedCurrentDate.minusMaxAge().adding(days: -1)
+        let expiredTimestamp = fixedCurrentDate.minusMaxAge().adding(seconds: -1)
         let (store, sut) = makeSUT(currentDate: { fixedCurrentDate })
 
         sut.validateCache()

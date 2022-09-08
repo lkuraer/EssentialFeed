@@ -66,7 +66,7 @@ class LoadFeedFromCacheUseCaseTests: XCTestCase {
     func test_load_requestCompletesWhenCacheIsOverExpired() {
         let feed = uniqueItems()
         let fixedCurrentDate = Date()
-        let expiredDate = fixedCurrentDate.minusMaxAge().adding(days: -1)
+        let expiredDate = fixedCurrentDate.minusMaxAge().adding(seconds: -1)
         let (store, sut) = makeSUT(currentDate: { fixedCurrentDate })
         
         expect(sut, toCompleteWith: .success([])) {
@@ -119,7 +119,7 @@ class LoadFeedFromCacheUseCaseTests: XCTestCase {
     func test_load_hasNoSideEffectsWhenCacheOverExpired() {
         let feed = uniqueItems()
         let fixedCurrentDate = Date()
-        let expiredCache = fixedCurrentDate.minusMaxAge().adding(days: -1)
+        let expiredCache = fixedCurrentDate.minusMaxAge().adding(seconds: -1)
         let (store, sut) = makeSUT(currentDate: { fixedCurrentDate })
 
         sut.load { _ in }
