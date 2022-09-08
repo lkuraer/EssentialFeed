@@ -18,6 +18,12 @@ class CodableFeedStore {
         }
     }
     
+    private let storeURL: URL
+    
+    init(_ url: URL) {
+        self.storeURL = url
+    }
+    
     private struct CodableFeedImage: Codable {
         private let id: UUID
         private let description: String?
@@ -36,9 +42,6 @@ class CodableFeedStore {
         }
 
     }
-
-    
-    private let storeURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!.appendingPathComponent("essentialfeed.store")
     
     func retreive(completion: @escaping FeedStore.RetreivalCompletion) {
         guard let data = try? Data(contentsOf: storeURL) else {
@@ -61,23 +64,21 @@ class CodableFeedStore {
 
 class CodableCacheCaseTests: XCTestCase {
 
-    override class func setUp() {
+    override func setUp() {
         super.setUp()
         
-        cleanData()
+        setUpEmtpyStoreState()
     }
-
-    override class func tearDown() {
+    
+    override func tearDown() {
         super.tearDown()
         
-        cleanData()
+        undoStoreSideEffects()
     }
     
     func test_retreive_hasNoSideEffectsWhenDeliverEmptyOnEmptyCache() {
-        cleanData()
+        let sut = makeSUT()
 
-        let sut = CodableFeedStore()
-        
         let exp = expectation(description: "Wait for cache retreival")
         
         sut.retreive { result in
@@ -95,10 +96,8 @@ class CodableCacheCaseTests: XCTestCase {
     }
     
     func test_retreive_hasNoSideEffectsWhenDeliverEmptyOnEmptyCacheTwice() {
-        cleanData()
+        let sut = makeSUT()
 
-        let sut = CodableFeedStore()
-        
         let exp = expectation(description: "Wait for cache retreival")
         
         sut.retreive { firstResult in
@@ -118,7 +117,7 @@ class CodableCacheCaseTests: XCTestCase {
     }
 
     func test_insertSampleDataAndThenRetreiveData() {
-        let sut = CodableFeedStore()
+        let sut = makeSUT()
         let feed = uniqueItems().locals
         let timestamp = Date()
 
@@ -144,6 +143,30 @@ class CodableCacheCaseTests: XCTestCase {
         wait(for: [exp], timeout: 1.0)
     }
 
-
+    // Helpers
+    private func makeSUT(file: StaticString = #file, line: UInt = #line) -> CodableFeedStore {
+        let sut = CodableFeedStore(testSpecificStoreURL())
+        
+        trackForMemoryLeaks(sut, file: file, line: line)
+        
+        return sut
+    }
     
+    private func testSpecificStoreURL() -> URL {
+        let storeURL = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!.appendingPathComponent("\(type(of: self)).store")
+        return storeURL
+    }
+    
+    private func deleteStoreArtifacts() -> Void {
+        try? FileManager.default.removeItem(at: testSpecificStoreURL())
+    }
+
+    private func setUpEmtpyStoreState() {
+        deleteStoreArtifacts()
+    }
+
+    private func undoStoreSideEffects() {
+        deleteStoreArtifacts()
+    }
+
 }
