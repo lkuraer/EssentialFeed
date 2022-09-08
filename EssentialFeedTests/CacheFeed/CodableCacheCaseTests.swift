@@ -116,7 +116,7 @@ class CodableCacheCaseTests: XCTestCase {
         wait(for: [exp], timeout: 1.0)
     }
 
-    func test_insertSampleDataAndThenRetreiveData() {
+    func test_retreival_hasNoSideEffectsOnRetreival() {
         let sut = makeSUT()
         let feed = uniqueItems().locals
         let timestamp = Date()
@@ -142,6 +142,39 @@ class CodableCacheCaseTests: XCTestCase {
 
         wait(for: [exp], timeout: 1.0)
     }
+    
+    func test_retreival_hasNoSideEffectsWhenRetreiveTwice() {
+        let sut = makeSUT()
+        let feed = uniqueItems().locals
+        let timestamp = Date()
+
+        let exp = expectation(description: "Wait for cache retreival")
+
+        sut.insert(items: feed, timestamp: timestamp) { insertError in
+            XCTAssertNil(insertError, "We expect that insertion was successfull")
+
+            sut.retreive { firstResult in
+                sut.retreive { secondResult in
+                    switch (firstResult, secondResult) {
+                    case let (.found(firstFoundFeed, firstFoundTimestamp), .found(secondFoundFeed, secondFoundTimestamp)):
+                        XCTAssertEqual(firstFoundFeed, feed)
+                        XCTAssertEqual(firstFoundTimestamp, timestamp)
+
+                        XCTAssertEqual(secondFoundFeed, feed)
+                        XCTAssertEqual(secondFoundTimestamp, timestamp)
+
+                    default:
+                        XCTFail("We expected to receive feed \(feed) and timestamp: \(timestamp), but received \(firstResult) and \(secondResult)")
+                    }
+
+                    exp.fulfill()
+                }
+            }
+        }
+
+        wait(for: [exp], timeout: 1.0)
+    }
+
 
     // Helpers
     private func makeSUT(file: StaticString = #file, line: UInt = #line) -> CodableFeedStore {
