@@ -30,3 +30,9 @@ func anyURL() -> URL {
 func anyData() -> Data {
     return Data(_: "any data".utf8)
 }
+
+func cleanData() {
+    let storeURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!.appendingPathComponent("essentialfeed.store")
+
+    try? FileManager.default.removeItem(at: storeURL)
+}
